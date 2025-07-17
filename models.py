@@ -2,6 +2,9 @@
 this file contains the model definitions for the application.
 """
 
+from torch import nn
+
+
 class BaseGNN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim):
         super().__init__()

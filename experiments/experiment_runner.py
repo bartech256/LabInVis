@@ -13,7 +13,8 @@ class ExperimentRunner:
     def save_experiment_results(self):
         """
         Save the results of the experiments to a file.
-        saves the model, metrics, and configuration.
+        create a directory for the experiment if it doesn't exist,
+        and saves the model, metrics, configuration and maybe visualizations.
         """
 
     def continue_experiment(self):

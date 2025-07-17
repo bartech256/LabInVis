@@ -1,3 +1,5 @@
+import pandas as pd
+
 class DataProcessor:
     """
     A class to process data for GNN creation.
