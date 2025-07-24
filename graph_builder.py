@@ -12,4 +12,5 @@ class GraphBuilder:
         """Connect nodes within a distance."""
     def _build_correlation(self) -> EdgeIndex:
         """Connect based on feature correlation."""
+        print("Building correlation graph")
     # … add other edge‑construction routines …
