@@ -1,0 +1,39 @@
+data_path: data/
+default_batch_size: 32
+default_criterion: MSELoss
+default_device: cuda
+default_epochs: 100
+default_learning_rate: 0.001
+default_model: SimpleGNN
+default_optimizer: Adam
+default_random_seed: 42
+default_train_val_test_split: !!python/tuple
+- 0.6
+- 0.2
+- 0.2
+embedding_features:
+- bedrooms
+- bathrooms
+- sqft_living
+- floors
+- grade
+- condition
+- sqft_above
+- sqft_basement
+experiment_name: default_experiment
+feature_statistics_file_path: data/feature_statistics.csv
+geo_features:
+- lat
+- long
+graph_type: spatial
+label_col: price
+processed_data_file_path: data/processed_data.csv
+radius1_k: 5
+radius2_k: 3
+radius3_k: 3
+raw_data_file_path: C:/Users/Yuval Rainis/Desktop/School/2025 B/Dlab/Project/kc_final.csv
+save_experiment_path: experiments\exp_2025-07-27_10-35-16
+spatial_features_file_path: data/spatial_features.csv
+test_data_file_path: data/test_data.csv
+train_data_file_path: data/train_data.csv
+val_data_file_path: data/val_data.csv
