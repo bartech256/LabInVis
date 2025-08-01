@@ -268,3 +268,8 @@ class MultiLayerGCN(torch.nn.Module):
             x = stage(x)
         
         return x.squeeze(-1)
+
+
+class CombinedModel (torch.nn.Module):
+    def __init__(self, GNN_model, regression_model)
+
