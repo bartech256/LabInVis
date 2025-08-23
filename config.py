@@ -1,60 +1,73 @@
+"""
+Responsibility:
+- Hold all experiment settings (hyperparameters, model type, file paths, etc.).
+- Load configuration from YAML or JSON files.
+"""
+
 import torch
 import os
+import yaml
+import json
 
 class Config:
-    def __init__(self):
-        # General parameters
-        self.default_random_seed = 42
+    def __init__(self, cfg_dict=None):
+        # General
+        self.random_seed = 42
 
-        # Data loading parameters
+        # Paths
         self.data_path = "data/"
         self.raw_data_file_path = os.path.join(self.data_path, "raw_data.csv")
-        self.processed_data_file_path = os.path.join(self.data_path, "processed_data.csv")
         self.processed_data_file_path = os.path.join(self.data_path, "processed_data.csv")
         self.spatial_features_file_path = os.path.join(self.data_path, "spatial_features.csv")
         self.feature_statistics_file_path = os.path.join(self.data_path, "feature_statistics.csv")
         self.train_data_file_path = os.path.join(self.data_path, "train_data.csv")
         self.val_data_file_path = os.path.join(self.data_path, "val_data.csv")
         self.test_data_file_path = os.path.join(self.data_path, "test_data.csv")
-        self.default_train_val_test_split = (0.6, 0.2, 0.2)
-
-        # Create data directory if it doesn't exist
         os.makedirs(self.data_path, exist_ok=True)
 
-        # Graph construction parameters
-        self.graph_type = "spatial" 
-        self.radius1_k = 30
-        self.radius2_k = 20
-        self.radius3_k = 0
-        self.top_k_sim = 7
+        # Features
         self.geo_features = ["lat", "long"]
-        self.raw_embedding_features = [
+        self.embedding_features = [
             "bedrooms", "bathrooms", "sqft_living", "floors",
             "grade", "condition", "sqft_above", "sqft_basement"
         ]
-        self.engineered_embedding_features = [
-            "bedrooms", "bathrooms", "sqft_living", "floors",
-            "grade", "condition", "sqft_above", "sqft_basement",
-            # New engineered features
+        self.engineered_features = [
             "total_sqft", "bath_bed_ratio", "house_age", "years_since_reno",
             "has_basement", "has_been_renovated", "is_luxury", "space_efficiency",
             "neighborhood_price_mean", "neighborhood_price_median", "neighborhood_price_std"
         ]
         self.label_col = "price"
 
-        # Experiment parameters
-        self.experiment_name = "default_experiment"
-        self.save_experiment_path = "experiments/"
-        self.GNN_model_type = "SimpleGNN"
-        self.GNN_model_params = {}
-        self.regression_model_type = "LinearRegression"
-        self.regression_model_params = {}
-        self.optimizer = "Adam"
-        self.criterion = "MSELoss"
-        self.max_epochs = 50  # Reduced from 100 for testing
-        self.train_loss_stop_threshold = 0.01
+        # Graph
+        self.graph_type = "radius" 
+        self.radius1_k = 30
+        self.radius2_k = 20
+        self.radius3_k = 0
+        self.top_k_sim = 7
+
+        # Training
         self.batch_size = 32
         self.learning_rate = 0.001
+        self.max_epochs = 50
+        self.criterion = "MSELoss"
+        self.optimizer = "Adam"
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.default_device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.what_to_visualize = ["training_loss", "validation_metrics", "graph_structure"] # Options can be seen in visualizer.py
+        # Experiment
+        self.models_to_run = ["SimpleGCN", "SimpleGAT", "MultiLayerGCN"]
+        self.save_path = "experiments/"
+        os.makedirs(self.save_path, exist_ok=True)
+
+        if cfg_dict:
+            self.__dict__.update(cfg_dict)
+
+    @staticmethod
+    def from_file(path: str):
+        if path.endswith(".yaml") or path.endswith(".yml"):
+            with open(path, "r") as f:
+                return Config(yaml.safe_load(f))
+        elif path.endswith(".json"):
+            with open(path, "r") as f:
+                return Config(json.load(f))
+        else:
+            raise ValueError("Config file must be YAML or JSON")

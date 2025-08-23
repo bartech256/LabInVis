@@ -1,3 +1,9 @@
+"""
+Responsibility:
+- Create models dynamically based on config.
+- Supports GNNs, regression models or combined models.
+"""
+
 import models
 import torch
 

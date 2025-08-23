@@ -1,3 +1,12 @@
+"""
+Responsibility:
+- Define all machine learning models (GNNs and baselines).
+- Includes:
+  - SimpleGCN
+  - SimpleGAT
+  - MultiLayerGCN
+"""
+
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Dropout, BatchNorm1d, LayerNorm

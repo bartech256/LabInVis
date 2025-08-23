@@ -1,3 +1,12 @@
+"""
+Responsibility:
+- Build graph from processed data (X, y, geo).
+- Supports multiple edge construction methods:
+  - KNN based on latitude/longitude.
+  - ZIP code.
+  - Radius-based or custom distance functions.
+"""
+
 import numpy as np
 from typing import List
 from torch_geometric.data import Data

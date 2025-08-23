@@ -1,0 +1,54 @@
+experiment_name: "exp1"
+
+# Data
+data_path: "data/"
+raw_data_file_path: "data/raw_kc.csv"
+label_col: "price"
+default_train_val_test_split: [0.7, 0.15, 0.15]
+
+# Features
+geo_features: ["lat", "long"]
+embedding_features:
+  - bedrooms
+  - bathrooms
+  - sqft_living
+  - floors
+  - grade
+  - condition
+  - sqft_above
+  - sqft_basement
+
+engineered_features:
+  - total_sqft
+  - bath_bed_ratio
+  - house_age
+  - years_since_reno
+  - has_basement
+  - has_been_renovated
+  - is_luxury
+  - space_efficiency
+  - neighborhood_price_mean
+  - neighborhood_price_median
+  - neighborhood_price_std
+
+# Graph
+graph_type: "radius"
+radius1_k: 30
+radius2_k: 20
+radius3_k: 0
+top_k_sim: 7
+
+# Training
+batch_size: 32
+learning_rate: 0.001
+max_epochs: 10
+optimizer: "Adam"
+criterion: "MSELoss"
+device: "cpu"   # or "cuda"
+
+# Models
+models_to_run:
+  - "SimpleGCN"
+
+# Save
+save_path: "experiments/"
