@@ -14,14 +14,13 @@ class Trainer:
     """
     Handles the training, validation, and prediction loop for models.
     """
-    def __init__(self, model, cfg):
+    def __init__(self, model, optimizer, criterion, cfg):
         self.model = model
+        self.optimizer = optimizer
+        self.criterion = criterion
         self.cfg = cfg
-        self.device = torch.device(cfg.device)
-        self.optimizer = getattr(torch.optim, cfg.optimizer)(model.parameters(), lr=cfg.learning_rate)
-        self.criterion = getattr(torch.nn, cfg.criterion)()
         self.best_val_loss = float("inf")
-
+        self.device = torch.device(cfg.default_device)
         self.model.to(self.device)
         print(f"Using device: {self.device}")
 

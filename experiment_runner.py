@@ -1,58 +1,117 @@
 """
 Responsibility:
-- Orchestrate the entire experiment pipeline:
-  1. Load config
-  2. Load processed data
-  3. Build graph (if required)
-  4. Create model
-  5. Train model using Trainer
-  6. Evaluate results with Evaluator
-  7. Visualize results with Visualizer
-  8. Save outputs to experiments/exp_xxx/
+- Orchestrates the full experiment pipeline.
+- Loads config, processes data, builds graphs, trains model, saves outputs.
 """
 
 import os
-from datetime import datetime
+import yaml
+import json
 import torch
+from datetime import datetime
+
 from config import Config
-from data_processor import DataProcessor
 from graph_builder import GraphBuilder
-from model_factory import ModelFactory
 from trainer import Trainer
+from data_processor import DataProcessor
+from model_factory import ModelFactory
 from evaluator import Evaluator
-from utils import print_hardware_info, save_config, save_metrics
+
 
 class ExperimentRunner:
-    def __init__(self, config_path: str):
-        self.cfg = Config.from_file(config_path)
-        self.data_processor = DataProcessor(self.cfg)
+    def __init__(self, config_path=None):
+        if config_path is not None:
+            with open(config_path, "r") as f:
+                cfg_dict = yaml.safe_load(f)
+            self.cfg = Config()
+            for k, v in cfg_dict.items():
+                setattr(self.cfg, k, v)  # override defaults from YAML
+        else:
+            self.cfg = Config()
+
         self.model_factory = ModelFactory()
-        self.evaluator = Evaluator()
+        self.processor = DataProcessor(self.cfg)
 
     def run_experiment_list(self):
-        for model_name in self.cfg.models_to_run:
-            self.run_experiment(model_name)
+        """Run experiments (for now single config)."""
+        self.run_experiment(self.cfg)
 
-    def run_experiment(self, model_name):
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        exp_path = os.path.join(self.cfg.save_path, f"{model_name}_{timestamp}")
+    def run_experiment(self, experiment_config: Config):
+        print(f"Running experiment: {getattr(experiment_config, 'experiment_name', 'unnamed')}")
+
+        # === OUTPUT FOLDER ===
+        timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        exp_path = os.path.join(
+            getattr(experiment_config, "save_experiment_path", "experiments/"),
+            f"exp_{timestamp}"
+        )
         os.makedirs(exp_path, exist_ok=True)
 
-        (X_train,y_train), (X_val,y_val), (X_test,y_test) = self.data_processor.load_or_create_data()
+        # === DATA PROCESSING ===
+        print("Loading and processing data...")
+        df = self.processor.load_raw()
+        df = self.processor.engineer_features(df)
+        df = self.processor.neighborhood_features(df)
 
-        if "GNN" in model_name:
-            train_graph = GraphBuilder(X_train, None, y_train, self.cfg).build()
-            val_graph   = GraphBuilder(X_val, None, y_val, self.cfg).build()
-        else:
-            train_graph, val_graph = None, None
+        X, y = self.processor.preprocess(df)
+        (train_X, train_y), (val_X, val_y), (test_X, test_y) = self.processor.train_val_test_split(X, y)
 
-        model = self.model_factory.create_model(self.cfg)
-        trainer = Trainer(model, self.cfg)
-        trainer.fit([train_graph],[val_graph])
+        geo = df[["lat", "long"]].values
+        train_geo = geo[:len(train_X)]
+        val_geo = geo[len(train_X):len(train_X)+len(val_X)]
 
+        # === GRAPH BUILDING ===
+        print("Building graphs...")
+        train_graph = GraphBuilder(train_X, train_geo, train_y, experiment_config).build()
+        val_graph = GraphBuilder(val_X, val_geo, val_y, experiment_config).build()
+
+        # === MODEL CREATION ===
+        print("Creating model...")
+        input_dim = train_graph.x.shape[1]  # ✅ מספר הפיצ'רים בפועל
+        experiment_config.GNN_model_params = {"input_dim": input_dim}
+
+        model = self.model_factory.create_model(experiment_config)
+
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=getattr(experiment_config, "learning_rate", 0.001)
+        )
+        criterion = torch.nn.MSELoss()
+
+        trainer = Trainer(model, optimizer, criterion, experiment_config)
+        trainer.fit([train_graph], [val_graph])
+
+        # === EVALUATION ===
+        print("Evaluating model...")
+        evaluator = Evaluator()
         preds = trainer.predict([val_graph])
-        metrics = self.evaluator.compute(torch.tensor(preds), torch.tensor(y_val))
+        targets = val_graph.y.cpu()
 
-        torch.save(model.state_dict(), os.path.join(exp_path,"model.pt"))
-        save_config(self.cfg, os.path.join(exp_path,"config.yaml"))
-        save_metrics(metrics, os.path.join(exp_path,"metrics.json"))
+        metrics = evaluator.compute(torch.tensor(preds), targets)
+        metrics["best_val_loss"] = float(trainer.best_val_loss)
+        metrics = {k: float(v) for k, v in metrics.items()}
+        # === SAVE RESULTS ===
+        model_path = os.path.join(exp_path, "model.pt")
+        self.model_factory.save_model(model, model_path)
+
+        metrics_path = os.path.join(exp_path, "metrics.json")
+        save_metrics(metrics, metrics_path)
+
+        config_out_path = os.path.join(exp_path, "config.yaml")
+        save_config(experiment_config, config_out_path)
+
+        print(f"Experiment completed and saved to: {exp_path}")
+
+
+# === HELPERS ===
+
+def save_config(cfg: Config, path: str):
+    """Save the config object as a YAML file."""
+    with open(path, 'w') as f:
+        yaml.dump(cfg.__dict__, f)  # dump attributes of Config
+
+
+def save_metrics(metrics: dict, path: str):
+    """Save evaluation metrics to a JSON file."""
+    with open(path, 'w') as f:
+        json.dump(metrics, f, indent=4)

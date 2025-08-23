@@ -16,7 +16,7 @@ class Config:
 
         # Paths
         self.data_path = "data/"
-        self.raw_data_file_path = os.path.join(self.data_path, "raw_data.csv")
+        self.raw_data_file_path = os.path.join(self.data_path, "raw_kc.csv")
         self.processed_data_file_path = os.path.join(self.data_path, "processed_data.csv")
         self.spatial_features_file_path = os.path.join(self.data_path, "spatial_features.csv")
         self.feature_statistics_file_path = os.path.join(self.data_path, "feature_statistics.csv")
@@ -51,13 +51,17 @@ class Config:
         self.max_epochs = 50
         self.criterion = "MSELoss"
         self.optimizer = "Adam"
+
+        # Device
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.default_device = self.device  # ✅ added for Trainer compatibility
 
         # Experiment
         self.models_to_run = ["SimpleGCN", "SimpleGAT", "MultiLayerGCN"]
         self.save_path = "experiments/"
         os.makedirs(self.save_path, exist_ok=True)
 
+        # Override defaults with config file values (if provided)
         if cfg_dict:
             self.__dict__.update(cfg_dict)
 

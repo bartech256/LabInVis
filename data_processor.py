@@ -19,58 +19,102 @@ class DataProcessor:
         self.label_scaler = None
 
     def load_raw(self):
-        return pd.read_csv(self.cfg.raw_data_file_path)
+        """Load raw dataset"""
+        print(f"Loading raw data from: {self.cfg.raw_data_file_path}")
+        df = pd.read_csv(self.cfg.raw_data_file_path)
+        print(f"✅ Loaded {len(df)} rows and {len(df.columns)} columns")
+        return df
 
     def engineer_features(self, df):
+        """Add engineered features and handle edge cases"""
         df = df.copy()
         df["total_sqft"] = df["sqft_above"] + df["sqft_basement"]
         df["bath_bed_ratio"] = df["bathrooms"] / np.maximum(df["bedrooms"], 1)
         df["house_age"] = 2015 - df["yr_built"]
-        df["years_since_reno"] = np.where(df["yr_renovated"] == 0,
-                                          df["house_age"],
-                                          2015 - df["yr_renovated"])
+        df["years_since_reno"] = np.where(
+            df["yr_renovated"] == 0,
+            df["house_age"],
+            2015 - df["yr_renovated"]
+        )
         df["has_basement"] = (df["sqft_basement"] > 0).astype(int)
         df["has_been_renovated"] = (df["yr_renovated"] > 0).astype(int)
-        df["is_luxury"] = ((df["grade"] >= 10) | (df["waterfront"] == 1) | (df["view"] >= 3)).astype(int)
+        df["is_luxury"] = (
+            (df["grade"] >= 10) | (df["waterfront"] == 1) | (df["view"] >= 3)
+        ).astype(int)
         df["space_efficiency"] = df["sqft_living"] / np.maximum(df["sqft_lot"], 1)
+
+        # Replace infinite values with NaN
+        df = df.replace([np.inf, -np.inf], np.nan)
         return df
 
     def neighborhood_features(self, df):
-        lat_bins = pd.cut(df['lat'], bins=50, labels=False)
-        long_bins = pd.cut(df['long'], bins=50, labels=False)
+        """Create neighborhood-level aggregated features"""
+        lat_bins = pd.cut(df["lat"], bins=50, labels=False)
+        long_bins = pd.cut(df["long"], bins=50, labels=False)
         df["neighborhood_id"] = lat_bins * 50 + long_bins
-        stats = df.groupby("neighborhood_id")["price"].agg(["mean","median","std"]).reset_index()
-        stats.columns = ["neighborhood_id","neighborhood_price_mean","neighborhood_price_median","neighborhood_price_std"]
+
+        stats = df.groupby("neighborhood_id")["price"].agg(["mean", "median", "std"]).reset_index()
+        stats.columns = [
+            "neighborhood_id",
+            "neighborhood_price_mean",
+            "neighborhood_price_median",
+            "neighborhood_price_std",
+        ]
+
         df = df.merge(stats, on="neighborhood_id", how="left")
+
+        # Fill missing stats with global dataset statistics
+        df["neighborhood_price_mean"] = df["neighborhood_price_mean"].fillna(df["price"].mean())
+        df["neighborhood_price_median"] = df["neighborhood_price_median"].fillna(df["price"].median())
+        df["neighborhood_price_std"] = df["neighborhood_price_std"].fillna(df["price"].std())
+
         return df
 
     def preprocess(self, df):
+        """Scale features and labels, drop NaN rows if any"""
         features = self.cfg.embedding_features + self.cfg.engineered_features
+        df = df.dropna(subset=features + [self.cfg.label_col])  # ✅ Drop NaN rows
+
         X = df[features].values
         y = df[self.cfg.label_col].values.reshape(-1, 1)
+
+        # Feature scaling
         self.feature_scaler = MinMaxScaler()
         X_scaled = self.feature_scaler.fit_transform(X)
+
+        # Label scaling
         self.label_scaler = MinMaxScaler()
         y_scaled = self.label_scaler.fit_transform(y).flatten()
+
         return X_scaled, y_scaled
 
-    def split(self, X, y, ratios=(0.7,0.15,0.15)):
+    def train_val_test_split(self, X, y, ratios=(0.7, 0.15, 0.15)):
+        """Split dataset into train/val/test"""
         n = len(X)
         indices = np.arange(n)
         np.random.shuffle(indices)
-        train_end = int(ratios[0]*n)
-        val_end = train_end + int(ratios[1]*n)
-        return (X[indices[:train_end]], y[indices[:train_end]]), \
-               (X[indices[train_end:val_end]], y[indices[train_end:val_end]]), \
-               (X[indices[val_end:]], y[indices[val_end:]])
+
+        train_end = int(ratios[0] * n)
+        val_end = train_end + int(ratios[1] * n)
+
+        return (
+            (X[indices[:train_end]], y[indices[:train_end]]),
+            (X[indices[train_end:val_end]], y[indices[train_end:val_end]]),
+            (X[indices[val_end:]], y[indices[val_end:]]),
+        )
 
     def load_or_create_data(self):
+        """Load processed data if exists, otherwise create it"""
         if os.path.exists(self.cfg.processed_data_file_path):
+            print(f"Loading processed data from: {self.cfg.processed_data_file_path}")
             df = pd.read_csv(self.cfg.processed_data_file_path)
         else:
+            print("Creating processed data from raw...")
             df = self.load_raw()
             df = self.engineer_features(df)
             df = self.neighborhood_features(df)
             df.to_csv(self.cfg.processed_data_file_path, index=False)
+            print(f"Saved processed data to: {self.cfg.processed_data_file_path}")
+
         X, y = self.preprocess(df)
-        return self.split(X, y)
+        return self.train_val_test_split(X, y)
