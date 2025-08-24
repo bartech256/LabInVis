@@ -11,9 +11,8 @@ import json
 
 class Config:
     def __init__(self, cfg_dict=None):
-        # General
+        # Sets a constant seed so that each run is deterministic
         self.random_seed = 42
-
         # Paths
         self.data_path = "data/"
         self.raw_data_file_path = os.path.join(self.data_path, "raw_kc.csv")
@@ -25,27 +24,29 @@ class Config:
         self.test_data_file_path = os.path.join(self.data_path, "test_data.csv")
         os.makedirs(self.data_path, exist_ok=True)
 
-        # Features
+        # Spatial features
         self.geo_features = ["lat", "long"]
+        # Basic features that go into the model
         self.embedding_features = [
             "bedrooms", "bathrooms", "sqft_living", "floors",
             "grade", "condition", "sqft_above", "sqft_basement"
         ]
+        # New features we are creating in DataProcessor
         self.engineered_features = [
             "total_sqft", "bath_bed_ratio", "house_age", "years_since_reno",
             "has_basement", "has_been_renovated", "is_luxury", "space_efficiency",
             "neighborhood_price_mean", "neighborhood_price_median", "neighborhood_price_std"
         ]
+        # Col we want to predict
         self.label_col = "price"
-
-        # Graph
+        # Method for creating the edges 
         self.graph_type = "radius" 
         self.radius1_k = 30
         self.radius2_k = 20
         self.radius3_k = 0
         self.top_k_sim = 7
 
-        # Training
+        # Training parameters
         self.batch_size = 32
         self.learning_rate = 0.001
         self.max_epochs = 50
@@ -54,9 +55,9 @@ class Config:
 
         # Device
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.default_device = self.device  # ✅ added for Trainer compatibility
+        self.default_device = self.device  
 
-        # Experiment
+        # Experiment - Which models to run
         self.models_to_run = ["SimpleGCN", "SimpleGAT", "MultiLayerGCN"]
         self.save_path = "experiments/"
         os.makedirs(self.save_path, exist_ok=True)
@@ -64,7 +65,7 @@ class Config:
         # Override defaults with config file values (if provided)
         if cfg_dict:
             self.__dict__.update(cfg_dict)
-
+    # Function to load from a file
     @staticmethod
     def from_file(path: str):
         if path.endswith(".yaml") or path.endswith(".yml"):

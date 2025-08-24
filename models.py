@@ -25,19 +25,14 @@ class SimpleGAT(torch.nn.Module):
         super(SimpleGAT, self).__init__()
         self.input_proj = Linear(input_dim, hidden_dim)
         self.input_bn = BatchNorm1d(hidden_dim)
-
         self.gat1 = GATConv(hidden_dim, hidden_dim, heads=heads, dropout=0.2, concat=True)
         self.bn1 = BatchNorm1d(hidden_dim * heads)
-
         self.gat2 = GATConv(hidden_dim * heads, hidden_dim, heads=heads, dropout=0.2, concat=True)
         self.bn2 = BatchNorm1d(hidden_dim * heads)
-
         self.gat3 = GATConv(hidden_dim * heads, hidden_dim//2, heads=heads//2, dropout=0.2, concat=True)
         self.bn3 = BatchNorm1d((hidden_dim//2) * (heads//2))
-
         self.gat_final = GATConv((hidden_dim//2) * (heads//2), hidden_dim//2, heads=1, dropout=0.1)
         self.bn_final = BatchNorm1d(hidden_dim//2)
-
         self.pred_layers = torch.nn.Sequential(
             Linear(hidden_dim//2, hidden_dim),
             LayerNorm(hidden_dim),
@@ -83,7 +78,6 @@ class SimpleGAT(torch.nn.Module):
 
         out = self.pred_layers(x)
         return out.squeeze(-1)
-
 
 class SimpleGCN(torch.nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int = 128, dropout: float = 0.4):

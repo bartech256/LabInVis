@@ -8,6 +8,8 @@ Responsibility:
 import argparse
 from experiment_runner import ExperimentRunner
 
+# Gets from the user which config file to use.
+# Creates an ExperimentRunner with this file.
 def main():
     parser = argparse.ArgumentParser(description="Run experiments")
     parser.add_argument("--config", type=str, required=True, help="Path to config file")

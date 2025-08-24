@@ -4,17 +4,14 @@ Responsibility:
 - Supports both GNNs (SimpleGCN, SimpleGAT, MultiLayerGCN) and baselines (MLPRegressor, LinearRegressionTorch).
 - Can also combine GNN with regression via CombinedModel.
 """
-
 import torch
 import models
 
 
 class ModelFactory:
     """A factory class to create models based on configuration."""
-
     def create_model(self, config):
         """Create a model based on the provided configuration."""
-
         # Support both dict (YAML) and Config object
         if isinstance(config, dict):
             GNN_model_type = config.get("GNN_model_type", None)

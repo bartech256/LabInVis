@@ -1,0 +1,35 @@
+experiment_name: "exp3_quick_test"
+
+# Data parameters
+data_path: "data/raw_data.csv"
+label_col: "price"
+train_val_test_split: [0.1, 0.1, 0.8]  
+
+# Graph parameters
+graph_type: "spatial"
+radius1_k: 5   
+radius2_k: 0
+radius3_k: 0
+top_k_sim: 3
+geo_features: ["lat", "long"]
+
+# Model parameters
+GNN_model_type: "SimpleGCN"
+GNN_model_params:
+  input_dim: 18
+  hidden_dim: 32   
+  dropout: 0.2
+
+# Training parameters
+optimizer: "Adam"
+criterion: "MSELoss"
+learning_rate: 0.001
+epochs: 5          
+batch_size: 16
+
+# Evaluation/Output
+save_experiment_path: "experiments/"
+what_to_visualize:
+  - "training_loss"
+  - "validation_metrics"
+  - "graph_structure"

@@ -5,7 +5,6 @@ Responsibility:
 - Provide prediction method for trained models.
 """
 
-
 import torch
 import numpy as np
 from tqdm import tqdm
@@ -15,6 +14,7 @@ class Trainer:
     Handles the training, validation, and prediction loop for models.
     """
     def __init__(self, model, optimizer, criterion, cfg):
+        # Gets the model, optimizer, loss function, and the settings from the cfg
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
@@ -24,7 +24,14 @@ class Trainer:
         self.model.to(self.device)
         print(f"Using device: {self.device}")
 
+        # New: store training history for visualization
+        self.train_losses = []
+        self.val_losses = []
+        self.val_mae = []
+        self.val_rmse = []
+
     def train_epoch(self, train_data):
+        """One epoch of training"""
         self.model.train()
         total_loss = 0
         for data in train_data:
@@ -38,6 +45,7 @@ class Trainer:
         return total_loss / len(train_data)
 
     def validate(self, val_data):
+        """Evaluate model on validation set"""
         self.model.eval()
         total_loss = 0
         preds, targets = [], []
@@ -56,22 +64,33 @@ class Trainer:
         return total_loss / len(val_data), mae, rmse
 
     def fit(self, train_data, val_data):
+        """Full training loop with history tracking"""
         epoch_pbar = tqdm(range(self.cfg.max_epochs), desc="Training")
         for epoch in epoch_pbar:
             train_loss = self.train_epoch(train_data)
             val_loss, mae, rmse = self.validate(val_data)
+
+            # Save history
+            self.train_losses.append(train_loss)
+            self.val_losses.append(val_loss)
+            self.val_mae.append(mae)
+            self.val_rmse.append(rmse)
+
             epoch_pbar.set_postfix({
                 "Train Loss": f"{train_loss:.4f}",
                 "Val Loss": f"{val_loss:.4f}",
                 "MAE": f"{mae:.4f}",
                 "RMSE": f"{rmse:.4f}"
             })
+
             if val_loss < self.best_val_loss:
                 self.best_val_loss = val_loss
                 torch.save(self.model.state_dict(), "best_model.pt")
-        print(f"✅ Training complete. Best Val Loss: {self.best_val_loss:.4f}")
+
+        print(f"Training complete. Best Val Loss: {self.best_val_loss:.4f}")
 
     def predict(self, data_list):
+        """Run inference on new data"""
         self.model.eval()
         predictions = []
         with torch.no_grad():

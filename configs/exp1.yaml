@@ -18,7 +18,7 @@ geo_features: ["lat", "long"]
 # Model parameters
 GNN_model_type: "SimpleGCN"
 GNN_model_params:
-  input_dim: 18   # מספר הפיצ'רים אחרי feature engineering
+  input_dim: 18   
   hidden_dim: 128
   dropout: 0.4
 

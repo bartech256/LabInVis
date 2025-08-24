@@ -11,6 +11,9 @@ import torch
 import numpy as np
 
 class Evaluator:
+  # Receives predictions and real values ​​(as torch.Tensor).
+  # Converts them to numpy.
+  # Returns two metrics: MAE and RMSE. 
     def compute(self, preds: torch.Tensor, targets: torch.Tensor):
         preds_np = preds.detach().cpu().numpy()
         targets_np = targets.detach().cpu().numpy()

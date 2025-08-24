@@ -23,15 +23,14 @@ class GraphBuilder:
     - Radius 3: Connect to top-k most similar nodes (by quality similarity)
     """
 
+    # Saves the information and extracts 2 types of features
     def __init__(self, X: np.ndarray, geo: np.ndarray, y: np.ndarray, cfg):
         self.X = X
         self.geo = geo
         self.y = y
         self.cfg = cfg
-
         self.structural_features = self._extract_structural_features()
         self.quality_features = self._extract_quality_features()
-
         print(f"GraphBuilder initialized with concentric radii + similarity filtering")
         print(f"  X shape: {X.shape}, geo shape: {geo.shape}, y shape: {y.shape}")
         print(f"  Structural features shape: {self.structural_features.shape}")
@@ -55,7 +54,6 @@ class GraphBuilder:
 
         edge_index = torch.cat([edge_index_r1, edge_index_r2, edge_index_r3], dim=1)
         edge_index = self._remove_self_loops(self._remove_duplicate_edges(edge_index))
-
         return Data(
             x=torch.tensor(self.X, dtype=torch.float32),
             edge_index=edge_index,

@@ -1,0 +1,65 @@
+GNN_model_params:
+  input_dim: 19
+GNN_model_type: SimpleGCN
+batch_size: 8
+criterion: MSELoss
+data_path: data/raw_data.csv
+default_device: cpu
+device: cpu
+embedding_features:
+- bedrooms
+- bathrooms
+- sqft_living
+- floors
+- grade
+- condition
+- sqft_above
+- sqft_basement
+engineered_features:
+- total_sqft
+- bath_bed_ratio
+- house_age
+- years_since_reno
+- has_basement
+- has_been_renovated
+- is_luxury
+- space_efficiency
+- neighborhood_price_mean
+- neighborhood_price_median
+- neighborhood_price_std
+epochs: 3
+experiment_name: exp4_tiny_test
+feature_statistics_file_path: data/feature_statistics.csv
+geo_features:
+- lat
+- long
+graph_type: spatial
+label_col: price
+learning_rate: 0.001
+max_epochs: 50
+models_to_run:
+- SimpleGCN
+- SimpleGAT
+- MultiLayerGCN
+optimizer: Adam
+processed_data_file_path: data/processed_data.csv
+radius1_k: 2
+radius2_k: 0
+radius3_k: 0
+random_seed: 42
+raw_data_file_path: data/raw_kc.csv
+save_experiment_path: experiments/
+save_path: experiments/
+spatial_features_file_path: data/spatial_features.csv
+test_data_file_path: data/test_data.csv
+top_k_sim: 1
+train_data_file_path: data/train_data.csv
+train_val_test_split:
+- 0.05
+- 0.05
+- 0.9
+val_data_file_path: data/val_data.csv
+what_to_visualize:
+- training_loss
+- validation_metrics
+- graph_structure

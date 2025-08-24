@@ -9,14 +9,13 @@ import yaml
 import json
 import torch
 from datetime import datetime
-
 from config import Config
 from graph_builder import GraphBuilder
 from trainer import Trainer
 from data_processor import DataProcessor
 from model_factory import ModelFactory
 from evaluator import Evaluator
-
+from visualizer import Visualizer   # NEW
 
 class ExperimentRunner:
     def __init__(self, config_path=None):
@@ -33,7 +32,7 @@ class ExperimentRunner:
         self.processor = DataProcessor(self.cfg)
 
     def run_experiment_list(self):
-        """Run experiments (for now single config)."""
+        """Run experiments"""
         self.run_experiment(self.cfg)
 
     def run_experiment(self, experiment_config: Config):
@@ -61,13 +60,13 @@ class ExperimentRunner:
         val_geo = geo[len(train_X):len(train_X)+len(val_X)]
 
         # === GRAPH BUILDING ===
-        print("Building graphs...")
+        print("Building graphs")
         train_graph = GraphBuilder(train_X, train_geo, train_y, experiment_config).build()
         val_graph = GraphBuilder(val_X, val_geo, val_y, experiment_config).build()
 
         # === MODEL CREATION ===
-        print("Creating model...")
-        input_dim = train_graph.x.shape[1]  # ✅ מספר הפיצ'רים בפועל
+        print("Creating model")
+        input_dim = train_graph.x.shape[1] 
         experiment_config.GNN_model_params = {"input_dim": input_dim}
 
         model = self.model_factory.create_model(experiment_config)
@@ -82,7 +81,7 @@ class ExperimentRunner:
         trainer.fit([train_graph], [val_graph])
 
         # === EVALUATION ===
-        print("Evaluating model...")
+        print("Evaluating model")
         evaluator = Evaluator()
         preds = trainer.predict([val_graph])
         targets = val_graph.y.cpu()
@@ -90,6 +89,16 @@ class ExperimentRunner:
         metrics = evaluator.compute(torch.tensor(preds), targets)
         metrics["best_val_loss"] = float(trainer.best_val_loss)
         metrics = {k: float(v) for k, v in metrics.items()}
+
+        # === VISUALIZATION ===
+        visualizer = Visualizer()
+        visualizer.plot_training_loss(trainer.train_losses, exp_path)
+        visualizer.plot_validation_metrics(
+            {"Val Loss": trainer.val_losses, "MAE": trainer.val_mae, "RMSE": trainer.val_rmse},
+            exp_path
+        )
+        visualizer.plot_graph(train_graph, exp_path)
+
         # === SAVE RESULTS ===
         model_path = os.path.join(exp_path, "model.pt")
         self.model_factory.save_model(model, model_path)
