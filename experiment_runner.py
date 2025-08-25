@@ -8,6 +8,8 @@ import os
 import yaml
 import json
 import torch
+import random
+import numpy as np
 from datetime import datetime
 from config import Config
 from graph_builder import GraphBuilder
@@ -37,6 +39,8 @@ class ExperimentRunner:
 
     def run_experiment(self, experiment_config: Config):
         print(f"Running experiment: {getattr(experiment_config, 'experiment_name', 'unnamed')}")
+
+        set_all_seeds(42)  # For reproducibility
 
         # === OUTPUT FOLDER ===
         timestamp = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -124,3 +128,11 @@ def save_metrics(metrics: dict, path: str):
     """Save evaluation metrics to a JSON file."""
     with open(path, 'w') as f:
         json.dump(metrics, f, indent=4)
+
+def set_all_seeds(seed: int = 42):
+    """Set seeds for reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)

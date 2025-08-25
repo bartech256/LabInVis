@@ -104,20 +104,3 @@ class DataProcessor:
             (X[indices[train_end:val_end]], y[indices[train_end:val_end]]),
             (X[indices[val_end:]], y[indices[val_end:]]),
         )
-    # If the data already exists, it is loaded. Otherwise, it is recreated. 
-    #This way, the data is created exactly once and is used for all inputs.
-    def load_or_create_data(self):
-        """Load processed data if exists, otherwise create it"""
-        if os.path.exists(self.cfg.processed_data_file_path):
-            print(f"Loading processed data from: {self.cfg.processed_data_file_path}")
-            df = pd.read_csv(self.cfg.processed_data_file_path)
-        else:
-            print("Creating processed data from raw")
-            df = self.load_raw()
-            df = self.engineer_features(df)
-            df = self.neighborhood_features(df)
-            df.to_csv(self.cfg.processed_data_file_path, index=False)
-            print(f"Saved processed data to: {self.cfg.processed_data_file_path}")
-
-        X, y = self.preprocess(df)
-        return self.train_val_test_split(X, y)
