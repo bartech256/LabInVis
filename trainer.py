@@ -8,6 +8,7 @@ Responsibility:
 import torch
 import numpy as np
 from tqdm import tqdm
+from evaluator import Evaluator   
 
 class Trainer:
     """
@@ -24,11 +25,13 @@ class Trainer:
         self.model.to(self.device)
         print(f"Using device: {self.device}")
 
-        # New: store training history for visualization
+        # Evaluator instance
+        self.evaluator = Evaluator()
+
+        # Store training history for visualization
         self.train_losses = []
         self.val_losses = []
-        self.val_mae = []
-        self.val_rmse = []
+        self.val_metrics = []  # list of dicts with all metrics (scaled + real)
 
     def train_epoch(self, train_data):
         """One epoch of training"""
@@ -55,32 +58,37 @@ class Trainer:
                 out = self.model(data)
                 loss = self.criterion(out, data.y)
                 total_loss += loss.item()
-                preds.append(out.cpu().numpy())
-                targets.append(data.y.cpu().numpy())
-        preds = np.concatenate(preds, axis=0)
-        targets = np.concatenate(targets, axis=0)
-        mae = np.mean(np.abs(preds - targets))
-        rmse = np.sqrt(np.mean((preds - targets) ** 2))
-        return total_loss / len(val_data), mae, rmse
+                preds.append(out.cpu())
+                targets.append(data.y.cpu())
+
+        preds = torch.cat(preds, dim=0)
+        targets = torch.cat(targets, dim=0)
+
+        # ✅ חישוב כל המדדים בעזרת Evaluator
+        metrics = self.evaluator.compute(preds, targets)
+
+        return total_loss / len(val_data), metrics
 
     def fit(self, train_data, val_data):
         """Full training loop with history tracking"""
         epoch_pbar = tqdm(range(self.cfg.max_epochs), desc="Training")
         for epoch in epoch_pbar:
             train_loss = self.train_epoch(train_data)
-            val_loss, mae, rmse = self.validate(val_data)
+            val_loss, metrics = self.validate(val_data)
 
             # Save history
             self.train_losses.append(train_loss)
             self.val_losses.append(val_loss)
-            self.val_mae.append(mae)
-            self.val_rmse.append(rmse)
+            self.val_metrics.append(metrics)
+
+            # ✅ מציגים רק scaled ב־progress bar
+            scaled_metrics = metrics["scaled"]
+            display_metrics = {k: f"{v:.4f}" for k, v in scaled_metrics.items()}
 
             epoch_pbar.set_postfix({
                 "Train Loss": f"{train_loss:.4f}",
                 "Val Loss": f"{val_loss:.4f}",
-                "MAE": f"{mae:.4f}",
-                "RMSE": f"{rmse:.4f}"
+                **display_metrics
             })
 
             if val_loss < self.best_val_loss:
