@@ -1,9 +1,3 @@
-"""
-Responsibility:
-- Compute regression evaluation metrics.
-- Supports both scaled and real values (if label_scaler is provided).
-"""
-
 import torch
 import numpy as np
 
@@ -42,10 +36,19 @@ class Evaluator:
         ss_res = np.sum((targets - preds) ** 2)
         ss_tot = np.sum((targets - np.mean(targets)) ** 2)
         r2 = 1 - (ss_res / ss_tot)
+        
+        # Mean Absolute Percentage Error
+        # Handle division by zero by adding small epsilon or filtering out zero targets
+        non_zero_mask = np.abs(targets) > 1e-8
+        if np.any(non_zero_mask):
+            mape = np.mean(np.abs((targets[non_zero_mask] - preds[non_zero_mask]) / targets[non_zero_mask])) * 100
+        else:
+            mape = float('inf')  # or np.nan, depending on your preference
 
         return {
             "MAE": float(mae),
             "MSE": float(mse),
             "RMSE": float(rmse),
-            "R2": float(r2)
+            "R2": float(r2),
+            "MAPE": float(mape)
         }
