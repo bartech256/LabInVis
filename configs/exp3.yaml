@@ -3,7 +3,7 @@ experiment_name: "exp3_quick_test"
 # Data parameters
 data_path: "data/raw_data.csv"
 label_col: "price"
-train_val_test_split: [0.1, 0.1, 0.8]  
+train_val_test_split: [0.7, 0.2, 0.1]
 
 # Graph parameters
 graph_type: "spatial"
@@ -24,7 +24,7 @@ GNN_model_params:
 optimizer: "Adam"
 criterion: "MSELoss"
 learning_rate: 0.001
-epochs: 5          
+epochs: 2         
 batch_size: 16
 
 # Evaluation/Output
