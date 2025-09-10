@@ -1,0 +1,29 @@
+experiment_name: "exp_r1_15_r2_15"
+
+data_path: "data/raw_data.csv"
+label_col: "price"
+train_val_test_split: [0.7, 0.15, 0.15]
+
+graph_type: "spatial"
+radius1_k: 15
+radius2_k: 15
+radius3_k: 0
+top_k_sim: 10
+geo_features: ["lat", "long"]
+
+GNN_model_type: "SimpleGCN"
+GNN_model_params:
+  input_dim: 18
+  hidden_dim: 128
+  dropout: 0.4
+
+optimizer: "Adam"
+criterion: "MSELoss"
+learning_rate: 0.001
+epochs: 20
+batch_size: 32
+
+save_experiment_path: "experiments/"
+what_to_visualize:
+  - "training_loss"
+  - "validation_metrics"
