@@ -1,0 +1,26 @@
+experiment_name: "exp_topksim_7"
+GNN_model_type: "SimpleGCN"
+GNN_model_params:
+  input_dim: 18
+  hidden_dim: 128
+  dropout: 0.4
+
+radius1_k: 30
+radius2_k: 0
+radius3_k: 0
+top_k_sim: 7
+graph_type: "spatial"
+geo_features: ["lat", "long"]
+
+optimizer: "Adam"
+criterion: "MSELoss"
+learning_rate: 0.001
+epochs: 20
+batch_size: 32
+
+label_col: "price"
+train_val_test_split: [0.7, 0.15, 0.15]
+save_experiment_path: "experiments/"
+what_to_visualize:
+  - "training_loss"
+  - "validation_metrics"
