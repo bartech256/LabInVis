@@ -14,6 +14,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Dropout, BatchNorm1d, LayerNorm
 from torch_geometric.nn import GATConv, GCNConv
+from torch_geometric.nn import SAGEConv, GINConv, TransformerConv, SuperGATConv, DNAConv, Sequential
 
 
 # ======================
@@ -217,6 +218,61 @@ class MultiLayerGCN(torch.nn.Module):
             x = stage(x)
 
         return x.squeeze(-1)
+
+
+class GraphSAGE(torch.nn.Module):
+    def __init__(self, input_dim: int, hidden_dim: int = 128, dropout: float = 0.4, attn=False, num_lin=2, conv='sage'):
+        super(GraphSAGE, self).__init__()
+        self.input_dim = input_dim
+        self.hidden_dim = hidden_dim
+        self.num_lin = num_lin
+        self.dropout = dropout
+        self.attn = attn
+        self.loss = torch.nn.MSELoss()
+
+        if conv == 'sage':
+            conv_layer1 = SAGEConv(input_dim, hidden_dim)
+            conv_layer2 = SAGEConv(hidden_dim, hidden_dim)
+        elif conv == 'gin':
+            lin1 = torch.nn.ModuleList()
+            lin1.append(torch.nn.Linear(input_dim, hidden_dim))
+            for _ in range(self.num_lin - 1):
+                lin1.append(torch.nn.Linear(hidden_dim, hidden_dim))
+            lin2 = torch.nn.ModuleList()
+            for _ in range(self.num_lin):
+                lin2.append(torch.nn.Linear(hidden_dim, hidden_dim))
+            conv_layer1 = GINConv(torch.nn.Sequential(*lin1))
+            conv_layer2 = GINConv(torch.nn.Sequential(*lin2))
+        elif conv == 'transformer':
+            conv_layer1 = TransformerConv(input_dim, hidden_dim)
+            conv_layer2 = TransformerConv(hidden_dim, hidden_dim)
+        elif conv == 'gat':
+            conv_layer1 = SuperGATConv(input_dim, hidden_dim)
+            conv_layer2 = SuperGATConv(hidden_dim, hidden_dim)
+        elif conv == 'dna':
+            conv_layer1 = DNAConv(input_dim, hidden_dim)
+            conv_layer2 = DNAConv(hidden_dim, hidden_dim)
+        else:
+            raise ValueError(f'Invalid convolution layer {conv}')
+
+        self.convs = Sequential('x, edge_index', [
+            (conv_layer1, 'x, edge_index -> x'),
+            torch.nn.ReLU(inplace=True),
+            (conv_layer2, 'x, edge_index -> x'),
+            torch.nn.ReLU(inplace=True),
+            (torch.nn.Dropout(p=dropout), 'x -> x')
+        ])
+
+        # Changed to output 1 target and add squeeze like other models
+        self.fc = torch.nn.Linear(hidden_dim, 1)
+
+        print(f"GraphSAGE initialized: hidden_dim={hidden_dim}, conv={conv}")
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        x = self.convs(x, edge_index)
+        out = self.fc(x)
+        return out.squeeze(-1)
 
 
 # ======================
