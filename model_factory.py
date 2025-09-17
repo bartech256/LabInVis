@@ -33,6 +33,8 @@ class ModelFactory:
             GNN_model = models.SimpleGCN(**GNN_model_params)
         elif GNN_model_type == "MultiLayerGCN":
             GNN_model = models.MultiLayerGCN(**GNN_model_params)
+        elif GNN_model_type == "GraphSAGE":
+            GNN_model = models.GraphSAGE(**GNN_model_params)
         elif GNN_model_type is None:
             GNN_model = None
         else:
