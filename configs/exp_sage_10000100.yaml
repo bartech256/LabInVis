@@ -6,11 +6,11 @@ label_col: "price"
 train_val_test_split: [0.7, 0.15, 0.15]
 
 # Graph
-graph_type: "spa
-radius1_k: 30
-radius2_k: 20
-radius3_k: 5
-top_k_sim: 7
+graph_type: "spatial"
+radius1_k: 100
+radius2_k: 0
+radius3_k: 0
+top_k_sim: 100
 geo_features: ["lat", "long"]
 
 # Model
