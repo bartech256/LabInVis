@@ -1,0 +1,35 @@
+experiment_name: "exp_Sage_1"
+
+# Data
+data_path: "data/raw_data.csv"
+label_col: "price"
+train_val_test_split: [0.7, 0.15, 0.15]
+
+# Graph
+graph_type: "spatial"
+radius1: 5
+radius1_k: 50
+radius2: 20
+radius2_k: 20
+radius3_k: 10
+geo_features: ["lat", "long"]
+
+# Model
+GNN_model_type: "MultiLayerGCN"
+GNN_model_params:
+  input_dim: 18
+  hidden_dim: 64
+  dropout: 0.4
+
+# Training
+optimizer: "Adam"
+criterion: "MSELoss"
+learning_rate: 0.001
+epochs: 50
+batch_size: 32
+
+# Output
+save_experiment_path: "experiments/"
+what_to_visualize:
+  - "training_loss"
+  - "validation_metrics"
