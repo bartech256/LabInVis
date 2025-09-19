@@ -29,11 +29,12 @@ class GraphBuilder:
         self.structural_features = self._extract_structural_features()
         self.quality_features = self._extract_quality_features()
 
-        # Distance thresholds in miles
-        self.distance_thresholds = [5.0, 20.0]  # [0-5], [5-20], [20+]
+        # Distance thresholds in miles from config
+        self.radius1_miles = getattr(cfg, 'radius1', 5.0)
+        self.radius2_miles = getattr(cfg, 'radius2', 20.0)
 
         print(f"GraphBuilder initialized with distance-based grouping")
-        print(f"  Distance groups: [0-5 miles], [5-20 miles], [20+ miles]")
+        print(f"  Distance groups: [0-{self.radius1_miles} miles], [{self.radius1_miles}-{self.radius2_miles} miles], [{self.radius2_miles}+ miles]")
         print(f"  X shape: {X.shape}, geo shape: {geo.shape}, y shape: {y.shape}")
         print(f"  Structural features shape: {self.structural_features.shape}")
         print(f"  Quality features shape: {self.quality_features.shape}")
@@ -58,7 +59,7 @@ class GraphBuilder:
         return distance_matrix
 
     def _get_distance_based_neighborhoods(self):
-        """Group neighbors by distance thresholds"""
+        """Group neighbors by distance thresholds from config"""
         distance_matrix = self._calculate_distance_matrix()
         n_nodes = self.geo.shape[0]
 
@@ -68,15 +69,14 @@ class GraphBuilder:
 
             # Create masks for each distance group (excluding self)
             mask_self = np.arange(n_nodes) != i
-            mask_group1 = (distances <= self.distance_thresholds[0]) & mask_self  # 0-5 miles
-            mask_group2 = (distances > self.distance_thresholds[0]) & (
-                        distances <= self.distance_thresholds[1]) & mask_self  # 5-20 miles
-            mask_group3 = (distances > self.distance_thresholds[1]) & mask_self  # 20+ miles
+            mask_group1 = (distances <= self.radius1_miles) & mask_self  # 0 to radius1
+            mask_group2 = (distances > self.radius1_miles) & (distances <= self.radius2_miles) & mask_self  # radius1 to radius2
+            mask_group3 = (distances > self.radius2_miles) & mask_self  # radius2+
 
             neighborhoods[i] = {
-                'group1': np.where(mask_group1)[0],  # 0-5 miles
-                'group2': np.where(mask_group2)[0],  # 5-20 miles
-                'group3': np.where(mask_group3)[0]  # 20+ miles
+                'group1': np.where(mask_group1)[0],  # 0 to radius1 miles
+                'group2': np.where(mask_group2)[0],  # radius1 to radius2 miles
+                'group3': np.where(mask_group3)[0]   # radius2+ miles
             }
 
         return neighborhoods
@@ -92,9 +92,9 @@ class GraphBuilder:
         edge_index = self._remove_self_loops(self._remove_duplicate_edges(edge_index))
 
         print(f"Graph built with {edge_index.shape[1]} edges")
-        print(f"  Group 1 (0-5 miles): {edge_index_g1.shape[1]} edges")
-        print(f"  Group 2 (5-20 miles): {edge_index_g2.shape[1]} edges")
-        print(f"  Group 3 (20+ miles): {edge_index_g3.shape[1]} edges")
+        print(f"  Group 1 (0-{self.radius1_miles} miles): {edge_index_g1.shape[1]} edges")
+        print(f"  Group 2 ({self.radius1_miles}-{self.radius2_miles} miles): {edge_index_g2.shape[1]} edges")
+        print(f"  Group 3 ({self.radius2_miles}+ miles): {edge_index_g3.shape[1]} edges")
 
         return Data(
             x=torch.tensor(self.X, dtype=torch.float32),
@@ -113,7 +113,7 @@ class GraphBuilder:
         return indices[top_idx]
 
     def _build_group1_edges(self, neighborhoods):
-        """Build edges for Group 1 (0-5 miles) using full feature similarity"""
+        """Build edges for Group 1 (0 to radius1 miles) using full feature similarity"""
         if self.cfg.radius1_k == 0:
             return torch.empty((2, 0), dtype=torch.long)
 
@@ -131,11 +131,10 @@ class GraphBuilder:
             for j in selected:
                 edge_list.append([i, j])
 
-        return torch.tensor(edge_list, dtype=torch.long).t().contiguous() if edge_list else torch.empty((2, 0),
-                                                                                                        dtype=torch.long)
+        return torch.tensor(edge_list, dtype=torch.long).t().contiguous() if edge_list else torch.empty((2, 0), dtype=torch.long)
 
     def _build_group2_edges(self, neighborhoods):
-        """Build edges for Group 2 (5-20 miles) using structural feature similarity"""
+        """Build edges for Group 2 (radius1 to radius2 miles) using structural feature similarity"""
         if self.cfg.radius2_k == 0:
             return torch.empty((2, 0), dtype=torch.long)
 
@@ -153,11 +152,10 @@ class GraphBuilder:
             for j in selected:
                 edge_list.append([i, j])
 
-        return torch.tensor(edge_list, dtype=torch.long).t().contiguous() if edge_list else torch.empty((2, 0),
-                                                                                                        dtype=torch.long)
+        return torch.tensor(edge_list, dtype=torch.long).t().contiguous() if edge_list else torch.empty((2, 0), dtype=torch.long)
 
     def _build_group3_edges(self, neighborhoods):
-        """Build edges for Group 3 (20+ miles) using quality feature similarity"""
+        """Build edges for Group 3 (radius2+ miles) using quality feature similarity"""
         if self.cfg.radius3_k == 0:
             return torch.empty((2, 0), dtype=torch.long)
 
@@ -175,8 +173,7 @@ class GraphBuilder:
             for j in selected:
                 edge_list.append([i, j])
 
-        return torch.tensor(edge_list, dtype=torch.long).t().contiguous() if edge_list else torch.empty((2, 0),
-                                                                                                        dtype=torch.long)
+        return torch.tensor(edge_list, dtype=torch.long).t().contiguous() if edge_list else torch.empty((2, 0), dtype=torch.long)
 
     def _remove_self_loops(self, edge_index):
         """Remove self-loops from edge index"""
@@ -191,5 +188,4 @@ class GraphBuilder:
             if edge not in edge_set:
                 edge_set.add(edge)
                 unique.append(edge)
-        return torch.tensor(unique, dtype=torch.long).t().contiguous() if unique else torch.empty((2, 0),
-                                                                                                  dtype=torch.long)
+        return torch.tensor(unique, dtype=torch.long).t().contiguous() if unique else torch.empty((2, 0), dtype=torch.long)

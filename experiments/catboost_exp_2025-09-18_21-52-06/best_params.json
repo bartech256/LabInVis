@@ -1,0 +1,15 @@
+{
+    "iterations": 926,
+    "learning_rate": 0.23257267626941475,
+    "depth": 7,
+    "l2_leaf_reg": 1.0053242148890462,
+    "border_count": 58,
+    "bagging_temperature": 0.3851947963322932,
+    "random_strength": 17.060256350833455,
+    "subsample": 0.6910609540365955,
+    "colsample_bylevel": 0.704533750372088,
+    "min_data_in_leaf": 71,
+    "one_hot_max_size": 128,
+    "leaf_estimation_method": "Gradient",
+    "bootstrap_type": "MVS"
+}

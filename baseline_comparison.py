@@ -111,7 +111,7 @@ class CatBoostExperimentRunner:
         self.study = study
         self.best_params = study.best_params
 
-        print(f"Best RMSE: {study.best_value:.4f}")
+        print(f"Best RMSE: {study.best_value:.8f}")
         print(f"Best parameters: {study.best_params}")
 
         return study.best_params
@@ -343,8 +343,8 @@ class CatBoostExperimentRunner:
         test_predictions_df.to_csv(os.path.join(exp_path, "test_predictions.csv"), index=False)
 
         print(f"CatBoost experiment completed and saved to: {exp_path}")
-        print(f"Final test RMSE: {metrics['Test']['scaled']['RMSE']:.4f}")
-        print(f"Final test MAE: {metrics['Test']['scaled']['MAE']:.4f}")
+        print(f"Final test RMSE: {metrics['Test']['scaled']['RMSE']:.8f}")
+        print(f"Final test MAE: {metrics['Test']['scaled']['MAE']:.8f}")
 
         return exp_path, metrics
 
@@ -360,12 +360,12 @@ def main():
     print(f"Experiment saved to: {exp_path}")
     print("\nTest Metrics (Scaled):")
     for metric, value in metrics['Test']['scaled'].items():
-        print(f"  {metric}: {value:.4f}")
+        print(f"  {metric}: {value:.8f}")
 
     if metrics['Test']['real'] is not None:
         print("\nTest Metrics (Real Scale):")
         for metric, value in metrics['Test']['real'].items():
-            print(f"  {metric}: {value:.4f}")
+            print(f"  {metric}: {value:.8f}")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,11 @@
+{
+    "iterations": 891,
+    "learning_rate": 0.10004949392963856,
+    "depth": 7,
+    "l2_leaf_reg": 6.680452597808495,
+    "border_count": 82,
+    "random_strength": 5.84965974775097,
+    "min_data_in_leaf": 4,
+    "bootstrap_type": "Bayesian",
+    "bagging_temperature": 4.8373030981917235
+}

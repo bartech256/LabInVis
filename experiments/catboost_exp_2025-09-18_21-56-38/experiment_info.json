@@ -1,0 +1,19 @@
+{
+    "experiment_name": "catboost_house_prices",
+    "timestamp": "2025-09-18_21-56-38",
+    "n_trials": 100,
+    "data_shape": {
+        "train": [
+            15129,
+            19
+        ],
+        "val": [
+            3241,
+            19
+        ],
+        "test": [
+            3243,
+            19
+        ]
+    }
+}

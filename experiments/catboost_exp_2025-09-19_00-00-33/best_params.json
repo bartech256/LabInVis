@@ -1,0 +1,11 @@
+{
+    "iterations": 1776,
+    "learning_rate": 0.036246144893897776,
+    "depth": 6,
+    "l2_leaf_reg": 1.0324280455583823,
+    "border_count": 62,
+    "random_strength": 6.017658864155268,
+    "min_data_in_leaf": 3,
+    "bootstrap_type": "Bernoulli",
+    "subsample": 0.8711799119509012
+}

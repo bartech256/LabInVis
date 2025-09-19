@@ -1,0 +1,68 @@
+GNN_model_params:
+  dropout: 0.4
+  hidden_dim: 64
+  input_dim: 19
+GNN_model_type: GraphSAGE
+batch_size: 32
+criterion: MSELoss
+data_path: data/raw_data.csv
+default_device: cuda
+device: cuda
+embedding_features:
+- bedrooms
+- bathrooms
+- sqft_living
+- floors
+- grade
+- condition
+- sqft_above
+- sqft_basement
+engineered_features:
+- total_sqft
+- bath_bed_ratio
+- house_age
+- years_since_reno
+- has_basement
+- has_been_renovated
+- is_luxury
+- space_efficiency
+- neighborhood_price_mean
+- neighborhood_price_median
+- neighborhood_price_std
+epochs: 20
+experiment_name: exp_Sage_1
+feature_statistics_file_path: data/feature_statistics.csv
+geo_features:
+- lat
+- long
+graph_type: spatial
+label_col: price
+learning_rate: 0.001
+max_epochs: 50
+models_to_run:
+- SimpleGCN
+- SimpleGAT
+- MultiLayerGCN
+optimizer: Adam
+processed_data_file_path: data/processed_data.csv
+radius1: 5
+radius1_k: 50
+radius2: 20
+radius2_k: 20
+radius3_k: 10
+random_seed: 42
+raw_data_file_path: data/raw_kc.csv
+save_experiment_path: experiments/
+save_path: experiments/
+spatial_features_file_path: data/spatial_features.csv
+test_data_file_path: data/test_data.csv
+top_k_sim: 7
+train_data_file_path: data/train_data.csv
+train_val_test_split:
+- 0.7
+- 0.15
+- 0.15
+val_data_file_path: data/val_data.csv
+what_to_visualize:
+- training_loss
+- validation_metrics
