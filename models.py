@@ -5,6 +5,7 @@ Responsibility:
   - SimpleGCN
   - SimpleGAT
   - MultiLayerGCN
+  - GraphSAGE
   - CombinedModel (to combine GNN + regression)
   - MLPRegressor (baseline)
   - LinearRegressionTorch (baseline)
@@ -13,9 +14,7 @@ Responsibility:
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear, Dropout, BatchNorm1d, LayerNorm
-from torch_geometric.nn import GATConv, GCNConv
-from torch_geometric.nn import SAGEConv, GINConv, TransformerConv, SuperGATConv, DNAConv, Sequential
-
+from torch_geometric.nn import GATConv, GCNConv, SAGEConv, GINConv, TransformerConv, SuperGATConv, DNAConv, Sequential
 
 # ======================
 #   GNN MODELS
@@ -31,9 +30,10 @@ class SimpleGAT(torch.nn.Module):
         self.gat2 = GATConv(hidden_dim * heads, hidden_dim, heads=heads, dropout=0.2, concat=True)
         self.bn2 = BatchNorm1d(hidden_dim * heads)
         self.gat3 = GATConv(hidden_dim * heads, hidden_dim//2, heads=heads//2, dropout=0.2, concat=True)
-        self.bn3 = BatchNorm1d((hidden_dim//2) * (heads//2))
-        self.gat_final = GATConv((hidden_dim//2) * (heads//2), hidden_dim//2, heads=1, dropout=0.1)
+        self.bn3 = BatchNorm1d((hidden_dim//2)*(heads//2))
+        self.gat_final = GATConv((hidden_dim//2)*(heads//2), hidden_dim//2, heads=1, dropout=0.1)
         self.bn_final = BatchNorm1d(hidden_dim//2)
+
         self.pred_layers = torch.nn.Sequential(
             Linear(hidden_dim//2, hidden_dim),
             LayerNorm(hidden_dim),
@@ -47,7 +47,6 @@ class SimpleGAT(torch.nn.Module):
             torch.nn.ELU(),
             Linear(hidden_dim//4, 1)
         )
-
         self.dropout = Dropout(dropout)
         print(f"SimpleGAT initialized: hidden_dim={hidden_dim}, heads={heads}")
 
@@ -79,6 +78,7 @@ class SimpleGAT(torch.nn.Module):
 
         out = self.pred_layers(x)
         return out.squeeze(-1)
+
 
 class SimpleGCN(torch.nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int = 128, dropout: float = 0.4):
@@ -234,13 +234,8 @@ class GraphSAGE(torch.nn.Module):
             conv_layer1 = SAGEConv(input_dim, hidden_dim)
             conv_layer2 = SAGEConv(hidden_dim, hidden_dim)
         elif conv == 'gin':
-            lin1 = torch.nn.ModuleList()
-            lin1.append(torch.nn.Linear(input_dim, hidden_dim))
-            for _ in range(self.num_lin - 1):
-                lin1.append(torch.nn.Linear(hidden_dim, hidden_dim))
-            lin2 = torch.nn.ModuleList()
-            for _ in range(self.num_lin):
-                lin2.append(torch.nn.Linear(hidden_dim, hidden_dim))
+            lin1 = torch.nn.ModuleList([Linear(input_dim if i==0 else hidden_dim, hidden_dim) for i in range(num_lin)])
+            lin2 = torch.nn.ModuleList([Linear(hidden_dim, hidden_dim) for _ in range(num_lin)])
             conv_layer1 = GINConv(torch.nn.Sequential(*lin1))
             conv_layer2 = GINConv(torch.nn.Sequential(*lin2))
         elif conv == 'transformer':
@@ -262,10 +257,7 @@ class GraphSAGE(torch.nn.Module):
             torch.nn.ReLU(inplace=True),
             (torch.nn.Dropout(p=dropout), 'x -> x')
         ])
-
-        # Changed to output 1 target and add squeeze like other models
-        self.fc = torch.nn.Linear(hidden_dim, 1)
-
+        self.fc = Linear(hidden_dim, 1)
         print(f"GraphSAGE initialized: hidden_dim={hidden_dim}, conv={conv}")
 
     def forward(self, data):
@@ -280,32 +272,19 @@ class GraphSAGE(torch.nn.Module):
 # ======================
 
 class CombinedModel(torch.nn.Module):
-    """
-    Combines a GNN model with a regression head (if provided).
-    """
+    """Combines a GNN model with a regression head."""
     def __init__(self, GNN_model=None, regression_model=None):
         super(CombinedModel, self).__init__()
         self.GNN_model = GNN_model
         self.regression_model = regression_model
 
     def forward(self, data):
-        if self.GNN_model is not None:
-            x = self.GNN_model(data)
-        else:
-            x = data.x
-
-        if self.regression_model is not None:
-            out = self.regression_model(x)
-        else:
-            out = x
-
-        return out
+        x = self.GNN_model(data) if self.GNN_model else data.x
+        return self.regression_model(x) if self.regression_model else x
 
 
 class MLPRegressor(torch.nn.Module):
-    """
-    Simple Multi-Layer Perceptron for regression (baseline).
-    """
+    """Simple Multi-Layer Perceptron for regression."""
     def __init__(self, input_dim, hidden_dim=128, dropout=0.3):
         super(MLPRegressor, self).__init__()
         self.net = torch.nn.Sequential(
@@ -323,9 +302,7 @@ class MLPRegressor(torch.nn.Module):
 
 
 class LinearRegressionTorch(torch.nn.Module):
-    """
-    Basic linear regression implemented in PyTorch.
-    """
+    """Basic linear regression implemented in PyTorch."""
     def __init__(self, input_dim):
         super(LinearRegressionTorch, self).__init__()
         self.linear = Linear(input_dim, 1)

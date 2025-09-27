@@ -7,7 +7,6 @@ Responsibility:
   - Graph structure visualization
 """
 
-
 import matplotlib.pyplot as plt
 import networkx as nx
 from torch_geometric.utils import to_networkx
@@ -15,8 +14,9 @@ from torch_geometric.utils import to_networkx
 class Visualizer:
     def __init__(self, save_path="experiments/"):
         self.save_path = save_path
-    # Drawing the loss curve along the epochs
+
     def plot_training_loss(self, losses, exp_path):
+        """Plot the training loss curve over epochs."""
         plt.figure()
         plt.plot(losses, label="Training Loss")
         plt.xlabel("Epochs")
@@ -25,8 +25,9 @@ class Visualizer:
         plt.title("Training Loss Curve")
         plt.savefig(f"{exp_path}/training_loss.png")
         plt.close()
-    # Plotting metrics along the epochs
+
     def plot_validation_metrics(self, metrics, exp_path):
+        """Plot validation metrics over epochs."""
         plt.figure()
         for metric_name, values in metrics.items():
             plt.plot(values, label=metric_name)
@@ -36,10 +37,11 @@ class Visualizer:
         plt.title("Validation Metrics")
         plt.savefig(f"{exp_path}/validation_metrics.png")
         plt.close()
-    # Drawing of the graph structure (what the connections between the houses look like)
+
     def plot_graph(self, graph_data, exp_path):
+        """Visualize the graph structure of nodes and edges."""
         G = to_networkx(graph_data, to_undirected=True)
-        plt.figure(figsize=(6,6))
+        plt.figure(figsize=(6, 6))
         nx.draw(G, node_size=20, alpha=0.6)
         plt.title("Graph Structure")
         plt.savefig(f"{exp_path}/graph_structure.png")

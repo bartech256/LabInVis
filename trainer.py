@@ -15,7 +15,6 @@ class Trainer:
     Handles the training, validation, and prediction loop for models.
     """
     def __init__(self, model, optimizer, criterion, cfg):
-        # Gets the model, optimizer, loss function, and the settings from the cfg
         self.model = model
         self.optimizer = optimizer
         self.criterion = criterion
@@ -25,10 +24,7 @@ class Trainer:
         self.model.to(self.device)
         print(f"Using device: {self.device}")
 
-        # Evaluator instance
         self.evaluator = Evaluator()
-
-        # Store training history for visualization
         self.train_losses = []
         self.val_losses = []
         self.val_metrics = []  # list of dicts with all metrics (scaled + real)
@@ -63,10 +59,7 @@ class Trainer:
 
         preds = torch.cat(preds, dim=0)
         targets = torch.cat(targets, dim=0)
-
-        # ✅ חישוב כל המדדים בעזרת Evaluator
         metrics = self.evaluator.compute(preds, targets)
-
         return total_loss / len(val_data), metrics
 
     def fit(self, train_data, val_data):
@@ -76,13 +69,12 @@ class Trainer:
             train_loss = self.train_epoch(train_data)
             val_loss, metrics = self.validate(val_data)
 
-            # Save history
             self.train_losses.append(train_loss)
             self.val_losses.append(val_loss)
             self.val_metrics.append(metrics)
 
-            # ✅ מציגים רק scaled ב־progress bar
-            scaled_metrics = metrics["scaled"]
+            # Display scaled metrics in progress bar
+            scaled_metrics = metrics.get("scaled", {})
             display_metrics = {k: f"{v:.4f}" for k, v in scaled_metrics.items()}
 
             epoch_pbar.set_postfix({
