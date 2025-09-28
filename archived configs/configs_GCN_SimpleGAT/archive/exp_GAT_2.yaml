@@ -15,7 +15,7 @@ radius3_k: 30
 geo_features: ["lat", "long"]
 
 # Model
-GNN_model_type: "MultiLayerGCN"
+GNN_model_type: "SimpleGAT"
 GNN_model_params:
   input_dim: 18
   hidden_dim: 64
