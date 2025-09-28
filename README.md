@@ -52,5 +52,7 @@ To run a series of experiments place them all in the configs folder
 Experiments will be run via:
 ```bash
 python main.py --config-dir .\configs
+```
+
 
 After running all experiments results will be save to the experiments folder with the run date as folder name
