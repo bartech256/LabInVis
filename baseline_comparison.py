@@ -1,8 +1,3 @@
-"""
-CatBoost House Price Prediction with Hyperparameter Tuning
-Integrates with existing GNN data processing pipeline
-"""
-
 import os
 import json
 from datetime import datetime
@@ -24,7 +19,12 @@ from evaluator import Evaluator
 class CatBoostExperimentRunner:
     """
     Runner for CatBoost experiments with hyperparameter tuning.
-    Handles data preparation, model training, evaluation, and saving results.
+
+    Responsibilities:
+        - Prepare and split data using DataProcessor.
+        - Tune CatBoost hyperparameters using Optuna.
+        - Train final model with best parameters.
+        - Evaluate and save results.
     """
 
     def __init__(self):
@@ -35,9 +35,12 @@ class CatBoostExperimentRunner:
         self.best_params = None
         self.study = None
 
+    # -----------------------------
+    # Data preparation
+    # -----------------------------
     def prepare_data(self):
         """
-        Load, process, and split data using the existing DataProcessor.
+        Load, process, and split data using the DataProcessor.
 
         Returns:
             tuple: ((train_X, train_y), (val_X, val_y), (test_X, test_y))
@@ -50,9 +53,12 @@ class CatBoostExperimentRunner:
         X, y = self.processor.preprocess(df)
         return self.processor.train_val_test_split(X, y)
 
+    # -----------------------------
+    # Hyperparameter tuning
+    # -----------------------------
     def objective(self, trial, train_data, val_data):
         """
-        Objective function for Optuna hyperparameter optimization.
+        Optuna objective function: trains a CatBoost model and returns validation RMSE.
 
         Args:
             trial (optuna.trial.Trial): Optuna trial object
@@ -65,19 +71,14 @@ class CatBoostExperimentRunner:
         train_X, train_y = train_data
         val_X, val_y = val_data
 
-        # Define search space
         params = self._get_hyperparameter_space(trial)
-
         try:
             model = CatBoostRegressor(**params)
             model.fit(train_X, train_y, eval_set=(val_X, val_y), verbose=False)
 
             val_pred = model.predict(val_X)
             rmse = np.sqrt(mean_squared_error(val_y, val_pred))
-
-            if np.isnan(rmse) or np.isinf(rmse):
-                return float('inf')
-            return rmse
+            return float('inf') if np.isnan(rmse) or np.isinf(rmse) else rmse
 
         except Exception as e:
             print(f"Trial failed with error: {e}")
@@ -86,7 +87,7 @@ class CatBoostExperimentRunner:
     @staticmethod
     def _get_hyperparameter_space(trial):
         """
-        Define the Optuna hyperparameter search space for CatBoost.
+        Define Optuna search space for CatBoost hyperparameters.
 
         Args:
             trial (optuna.trial.Trial): Optuna trial object
@@ -110,7 +111,7 @@ class CatBoostExperimentRunner:
             "use_best_model": True,
         }
 
-        # Bootstrap type dependent params
+        # Bootstrap type dependent parameters
         bootstrap_type = trial.suggest_categorical("bootstrap_type", ["Bayesian", "Bernoulli"])
         params["bootstrap_type"] = bootstrap_type
         if bootstrap_type == "Bayesian":
@@ -151,9 +152,12 @@ class CatBoostExperimentRunner:
         print(f"Best parameters: {self.best_params}")
         return self.best_params
 
+    # -----------------------------
+    # Model training
+    # -----------------------------
     def train_best_model(self, train_data, val_data, best_params):
         """
-        Train CatBoost with the best hyperparameters.
+        Train CatBoost using the best hyperparameters.
 
         Args:
             train_data (tuple): (train_X, train_y)
@@ -164,17 +168,15 @@ class CatBoostExperimentRunner:
             CatBoostRegressor: Trained model
         """
         print("Training final model with best parameters...")
-        train_X, train_y = train_data
-        val_X, val_y = val_data
-
-        # Clean and finalize parameters
         params = self._clean_params(best_params)
         print(f"Final model parameters: {params}")
 
+        train_X, train_y = train_data
+        val_X, val_y = val_data
+
         model = CatBoostRegressor(**params)
         model.fit(
-            train_X,
-            train_y,
+            train_X, train_y,
             eval_set=(val_X, val_y),
             early_stopping_rounds=100,
             use_best_model=True,
@@ -186,20 +188,18 @@ class CatBoostExperimentRunner:
     @staticmethod
     def _clean_params(params):
         """
-        Remove incompatible or unnecessary parameters.
+        Remove incompatible or unnecessary parameters before training.
 
         Args:
-            params (dict): Original parameter dictionary
+            params (dict): Original parameters
 
         Returns:
             dict: Cleaned parameters
         """
         clean_params = params.copy()
-        # Remove parameters that may conflict
         for key in ["od_wait", "od_type", "use_best_model"]:
             clean_params.pop(key, None)
 
-        # Add required fixed parameters
         clean_params.update({
             "verbose": False,
             "random_seed": 42,
@@ -207,7 +207,7 @@ class CatBoostExperimentRunner:
             "eval_metric": "RMSE",
         })
 
-        # Handle bootstrap-specific params
+        # Bootstrap-specific clean-up
         if clean_params.get("bootstrap_type") == "Bernoulli":
             clean_params.pop("bagging_temperature", None)
         elif clean_params.get("bootstrap_type") == "Bayesian":
@@ -215,6 +215,9 @@ class CatBoostExperimentRunner:
 
         return clean_params
 
+    # -----------------------------
+    # Evaluation
+    # -----------------------------
     def evaluate_model(self, model, val_data, test_data):
         """
         Evaluate model on validation and test sets.
@@ -229,8 +232,8 @@ class CatBoostExperimentRunner:
         """
         print("Evaluating model...")
 
-        # Evaluator wrapper to work with numpy arrays
         class EvaluatorWrapper(Evaluator):
+            """Wrap Evaluator to accept numpy arrays instead of torch tensors."""
             def compute_from_arrays(self, preds, targets):
                 import torch
                 preds_tensor = torch.tensor(preds, dtype=torch.float32)
@@ -253,6 +256,9 @@ class CatBoostExperimentRunner:
 
         return metrics, val_preds, test_preds
 
+    # -----------------------------
+    # Saving results
+    # -----------------------------
     def save_results(self, model, metrics, val_preds, test_preds, exp_path):
         """
         Save model, metrics, predictions, and optimization results.
@@ -262,7 +268,7 @@ class CatBoostExperimentRunner:
             metrics (dict): Evaluation metrics
             val_preds (np.ndarray): Validation predictions
             test_preds (np.ndarray): Test predictions
-            exp_path (str): Path to save experiment outputs
+            exp_path (str): Path to save outputs
         """
         print("Saving results...")
         os.makedirs(exp_path, exist_ok=True)
@@ -281,16 +287,19 @@ class CatBoostExperimentRunner:
                 json.dump(self.best_params, f, indent=4)
 
         # Save predictions
-        pd.DataFrame({"true": val_preds, "pred": val_preds}).to_csv(
+        pd.DataFrame({"pred": val_preds}).to_csv(
             os.path.join(exp_path, "val_predictions.csv"), index=False
         )
-        pd.DataFrame({"true": test_preds, "pred": test_preds}).to_csv(
+        pd.DataFrame({"pred": test_preds}).to_csv(
             os.path.join(exp_path, "test_predictions.csv"), index=False
         )
 
+    # -----------------------------
+    # Full experiment
+    # -----------------------------
     def run_experiment(self, n_trials=100):
         """
-        Complete workflow: data prep, hyperparameter tuning, training, evaluation, and saving.
+        Complete workflow: data prep, hyperparameter tuning, training, evaluation, saving.
 
         Args:
             n_trials (int): Number of Optuna trials
@@ -307,10 +316,19 @@ class CatBoostExperimentRunner:
             f"catboost_exp_{timestamp}"
         )
 
+        # Step 1: Prepare data
         train_data, val_data, test_data = self.prepare_data()
+
+        # Step 2: Hyperparameter tuning
         best_params = self.tune_hyperparameters(train_data, val_data, n_trials)
+
+        # Step 3: Train best model
         model = self.train_best_model(train_data, val_data, best_params)
+
+        # Step 4: Evaluate
         metrics, val_preds, test_preds = self.evaluate_model(model, val_data, test_data)
+
+        # Step 5: Save results
         self.save_results(model, metrics, val_preds, test_preds, exp_path)
 
         print(f"Experiment completed and saved to: {exp_path}")
@@ -328,7 +346,7 @@ def main():
     for metric, value in metrics["Test"]["scaled"].items():
         print(f"  {metric}: {value:.8f}")
 
-    if metrics["Test"]["real"] is not None:
+    if metrics["Test"].get("real") is not None:
         print("\nTest Metrics (Real Scale):")
         for metric, value in metrics["Test"]["real"].items():
             print(f"  {metric}: {value:.8f}")
